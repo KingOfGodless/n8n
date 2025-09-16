@@ -1,0 +1,752 @@
+{
+  "name": "Automate Email",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🧪 TEST BEFORE DEPLOYING\n1. Send test email\n2. Check Sheets output\n3. Verify summary quality\n4. Adjust filters/prompt as needed",
+        "height": 220,
+        "width": 300,
+        "color": 6
+      },
+      "id": "39b2d4bd-b29b-4e52-864e-0090e8f8e56f",
+      "name": "Test Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2304,
+        2016
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 1,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json[\"Sender Name\"] }}",
+              "rightValue": "Free fire Pk tamilanda"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a7024314-9303-42f3-a854-dcb385c991f7",
+      "name": "Check Valid Email",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1264,
+        224
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = [];\n\nfor (const item of $input.all()) {\n  const emailData = item.json;\n  \n  // Handle sender information (unchanged)\n  let senderEmail = '';\n  let senderName = '';\n\n  if (emailData.from?.value?.[0]) {\n    senderEmail = emailData.from.value[0].address || '';\n    senderName = emailData.from.value[0].name || senderEmail;\n  } else if (emailData.from?.text) {\n    const emailMatch = emailData.from.text.match(/<([^>]+)>/) || \n                      emailData.from.text.match(/([^\\s]+@[^\\s]+)/);\n    senderEmail = emailMatch ? emailMatch[1] : emailData.from.text;\n    \n    const nameMatch = emailData.from.text.match(/^([^<]+)/);\n    senderName = nameMatch ? nameMatch[1].trim().replace(/\\\"/g, '') : senderEmail;\n  }\n\n  // Format date (unchanged)\n  const receivedDate = new Date(emailData.date || emailData.receivedTime);\n  const formattedDate = receivedDate.toLocaleString('en-US', {\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n    hour: '2-digit',\n    minute: '2-digit',\n    hour12: true\n  });\n\n  // FIXED CONTENT EXTRACTION\n  let emailContent = '';\n  \n  // 1. First priority: Plain text version\n  if (emailData.text) {\n    emailContent = emailData.text;\n  } \n  // 2. Second priority: HTML version (convert to plain text)\n  else if (emailData.html) {\n    emailContent = emailData.html\n      .replace(/<style[^>]*>.*?<\\/style>/gs, '')  // Remove CSS\n      .replace(/<[^>]*>/g, ' ')                   // Strip HTML tags\n      .replace(/\\s+/g, ' ')                       // Collapse whitespace\n      .trim();\n  }\n  // 3. Fallback to other possible fields\n  else if (emailData.body || emailData.textPlain || emailData.textHtml) {\n    emailContent = emailData.body || emailData.textPlain || emailData.textHtml;\n  }\n\n  // Truncate content if too long\n  const maxContentLength = 5000;\n  if (emailContent.length > maxContentLength) {\n    emailContent = emailContent.substring(0, maxContentLength) + '... [truncated]';\n  }\n\n  // Create row data\n  const rowData = {\n    'Date': formattedDate,\n    'Sender Name': senderName,\n    'Sender Email': senderEmail,\n    'Subject': emailData.subject || 'No Subject',\n    'Content': emailContent,\n    //'Message ID': emailData.messageId || '',\n    'Has Attachments': emailData.attachments?.length > 0 ? 'Yes' : 'No'\n  };\n  \n  items.push({ json: rowData });\n}\n\nreturn items;"
+      },
+      "id": "d408d58f-c818-4601-8109-f90bb152e381",
+      "name": "info1",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1072,
+        400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "id": "eab995bb-43bf-4c23-9cc1-41b80a9deb0a",
+      "name": "Groq",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "position": [
+        1456,
+        672
+      ],
+      "typeVersion": 1,
+      "notesInFlow": false,
+      "credentials": {
+        "groqApi": {
+          "id": "hnf2hCKd9nBABkFf",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 1,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1d2e3f4-g5h6-i7j8-k9l0-m1n2o3p4q5r6",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json[\"Sender Name\"] }}",
+              "rightValue": "Kumar karthick"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f7e7f75b-6efd-4575-89f7-30bbe19736a1",
+      "name": "Check Valid Email1",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1296,
+        528
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "=https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit?gid=1240669852#gid=1240669852",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2079602327,
+          "mode": "list",
+          "cachedResultName": "process 1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit#gid=2079602327"
+        },
+        "columns": {
+          "value": {
+            "Date": "={{ $('info1').item.json.Date }}",
+            "summary": "={{ $json.output }}",
+            "subject ": "={{ $('info1').item.json.Subject }}",
+            "sender name": "={{ $('info1').item.json[\"Sender Name\"] }}",
+            "sender email": "={{ $('info1').item.json[\"Sender Email\"] }}"
+          },
+          "schema": [
+            {
+              "id": "sender name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender email",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject ",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "subject ",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "summary",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Date",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "sender name"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "910c9c7c-a09f-4e12-af94-818cdcb01046",
+      "name": "LP 1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1920,
+        416
+      ],
+      "typeVersion": 4,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ay684gwyCALtji9X",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultUrl": "YOUR_GOOGLE_SHEETS_URL",
+          "cachedResultName": "Sheet1"
+        },
+        "columns": {
+          "value": {
+            "Date": "={{ $('info1').item.json.Date }}",
+            "summary": "={{ $json.output }}",
+            "subject ": "={{ $('info1').item.json.Subject }}",
+            "sender name": "={{ $('info1').item.json[\"Sender Name\"] }}",
+            "sender email": "={{ $('info1').item.json[\"Sender Email\"] }}"
+          },
+          "schema": [
+            {
+              "id": "sender name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender email",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject ",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "subject ",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "summary",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Date",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "sender name"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "75cc1f51-da2d-411a-bd64-7c574c5d5d11",
+      "name": "MTC 1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1920,
+        48
+      ],
+      "typeVersion": 4,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ay684gwyCALtji9X",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Date    = \"{{ $json.Content.split(\"\\n\")[3]}}\"",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "b5d3d06e-116f-4c40-bbd0-c22cd622af96",
+      "name": "King Agent 1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1552,
+        416
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Date    = \"{{ $json.Content.split(\"\\n\")[1]}}\"",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "id": "6d658f3d-9d19-42f7-bba1-290766e3e01a",
+      "name": "King Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1552,
+        576
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit?gid=223307637#gid=223307637",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 223307637,
+          "mode": "list",
+          "cachedResultName": "process 2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit#gid=223307637"
+        },
+        "columns": {
+          "value": {
+            "Date": "={{ $('info1').item.json.Date }}",
+            "summary": "={{ $json.output }}",
+            "subject ": "={{ $('info1').item.json.Subject }}",
+            "sender name": "={{ $('info1').item.json[\"Sender Name\"] }}",
+            "sender email": "={{ $('info1').item.json[\"Sender Email\"] }}"
+          },
+          "schema": [
+            {
+              "id": "sender name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender email",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject ",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "subject ",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "summary",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Date",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "sender name"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "6e32a687-85ac-4b2c-8791-1f68bd87d500",
+      "name": "LP 2",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1920,
+        576
+      ],
+      "typeVersion": 4,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ay684gwyCALtji9X",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit?gid=0#gid=0",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1288062104,
+          "mode": "list",
+          "cachedResultName": "Data 2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lPWnLMi1CK1ei18LNhGILcC50u0Q_mAQQke-wQlKgi8/edit#gid=1288062104"
+        },
+        "columns": {
+          "value": {
+            "Date": "={{ $('info1').item.json.Date }}",
+            "summary": "={{ $json.output }}",
+            "subject ": "={{ $('info1').item.json.Subject }}",
+            "sender name": "={{ $('info1').item.json[\"Sender Name\"] }}",
+            "sender email": "={{ $('info1').item.json[\"Sender Email\"] }}"
+          },
+          "schema": [
+            {
+              "id": "sender name",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender name",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sender email",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "sender email",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "subject ",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "subject ",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "summary",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "summary",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Date",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "sender name"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4059a19e-c8b8-418a-8606-435f1a7580b9",
+      "name": "MTC 2",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1920,
+        240
+      ],
+      "typeVersion": 4,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Ay684gwyCALtji9X",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "=everyHour",
+              "minute": 59
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "CATEGORY_PERSONAL"
+          ]
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "a69f2251-947b-444c-b314-d510870b6583",
+      "name": "T to K",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "position": [
+        864,
+        304
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "z4OUEmcmXikxFgTZ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "=everyHour",
+              "minute": 59
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "CATEGORY_PERSONAL"
+          ]
+        },
+        "options": {
+          "downloadAttachments": false
+        }
+      },
+      "id": "1bc6b7b4-a6ef-410f-b1b0-4d50e124b9b8",
+      "name": "K to T",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "position": [
+        864,
+        512
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "nzzDWWWr3hLgLVEE",
+          "name": "Gmail account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "info1": {
+      "main": [
+        [
+          {
+            "node": "Check Valid Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid Email": {
+      "main": [
+        [
+          {
+            "node": "MTC 1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "King Agent 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Valid Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "King Agent 1",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "King Agent 2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Valid Email1": {
+      "main": [
+        [
+          {
+            "node": "MTC 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "King Agent 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "MTC 1": {
+      "main": [
+        []
+      ]
+    },
+    "King Agent 1": {
+      "main": [
+        [
+          {
+            "node": "LP 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "King Agent 2": {
+      "main": [
+        [
+          {
+            "node": "LP 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "T to K": {
+      "main": [
+        [
+          {
+            "node": "info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "K to T": {
+      "main": [
+        [
+          {
+            "node": "info1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "843f27ff-6049-4477-8c76-691306b7f322",
+  "meta": {
+    "templateId": "5678",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8900af020ffeb925fb515c92fa658bd235da724c2cef5a27e3a79bba1ca40921"
+  },
+  "id": "FDv1C7g5oYgowhbo",
+  "tags": []
+}
