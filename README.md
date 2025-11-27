@@ -53,8 +53,8 @@
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/yourusername/web-spyder.git
-    cd web-spyder
+    git clone https://github.com/KingOfGodless/WebSpyder_Certificate.git
+    cd WebSpyder_Certificate
     ```
 
 2.  **Configure Firebase**
@@ -166,6 +166,7 @@ Markdown
 ├── style.css           # Meka-Cyber CSS Theme
 ├── app.js              # Core Logic (PDF, QR, CSV, UI)
 └── firebase-config.js  # Firebase API Keys (Not verified in git)
+```
 ⚠️ Important Configuration
 Firestore Rules
 Set your database rules to allow public reading but admin-only writing:
