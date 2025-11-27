@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSpyder | Admin</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Required Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+
+    <!-- LOGIN PANEL -->
+    <div id="loginSection" class="cyber-card" style="margin-top: 100px;">
+        <h2>System Access</h2>
+        <input type="email" id="adminEmail" placeholder="Operator Email">
+        <input type="password" id="adminPass" placeholder="Access Key">
+        <button class="btn-cyber" id="loginBtn">Initialize Session</button>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboardSection" class="hidden" style="width: 100%;">
+        <div class="nav-bar">
+            <h2 style="margin:0;">WebSpyder Console</h2>
+            <button class="btn-danger" id="logoutBtn">Terminate</button>
+        </div>
+
+        <div class="dashboard-container">
+            <!-- GENERATE CARD -->
+            <div class="cyber-card">
+                <h3>Mint Certificate</h3>
+                <input type="text" id="studentName" placeholder="Student Name">
+                <input type="text" id="courseName" placeholder="Course Name">
+                <input type="date" id="issueDate">
+                <label style="color:var(--neon-blue); font-size:0.8rem;">Photo URL (Imgur/GitHub)</label>
+                <input type="text" id="studentPhotoURL" placeholder="https://example.com/photo.jpg">
+                <button class="btn-cyber" id="generateBtn">Create & Download</button>
+                <div id="genLoader" class="loader"></div>
+            </div>
+
+            <!-- DATABASE LIST -->
+            <div class="cyber-card">
+                <h3>Database</h3>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table id="certTable" style="width:100%; color:#fff; border-collapse: collapse;">
+                        <tbody><!-- Rows inserted by JS --></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HIDDEN CERTIFICATE TEMPLATE -->
+    <div id="cert-canvas-container">
+        <div class="cert-border" id="certDOM">
+            <h1 style="font-size:3rem; margin-top:20px;">CERTIFICATE</h1>
+            <p style="letter-spacing: 5px; text-transform:uppercase;">Of Completion</p>
+            <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+                <img id="pdfPhoto" class="cert-photo" src="">
+                <p>This certifies that</p>
+                <h2 id="pdfName" class="cert-name">NAME</h2>
+                <p>Has completed the course</p>
+                <h3 id="pdfCourse" style="color:white; margin:10px 0;">COURSE</h3>
+                <p>Date: <span id="pdfDate"></span></p>
+            </div>
+            <div id="pdfQR" style="position: absolute; bottom: 20px; right: 20px;"></div>
+            <div id="pdfID" style="position: absolute; bottom: 20px; left: 20px; color: #555;"></div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
