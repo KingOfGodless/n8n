@@ -43,7 +43,7 @@
 
 | Admin Dashboard | Certificate Preview |
 | :---: | :---: |
-| <img src="https://via.placeholder.com/400x200/000000/00f3ff?text=Admin+Console" alt="Admin Dashboard" width="400"> | <img src="https://via.placeholder.com/400x200/000000/00f3ff?text=Generated+PDF" alt="Certificate" width="400"> |
+| <img src="https://web-spyder-certificate.vercel.app/" alt="Admin Dashboard" width="400"> | <img src="https://web-spyder-certificate.vercel.app/" alt="Certificate" width="400"> |
 
 > *Note: Replace the placeholder links above with actual screenshots of your application.*
 
@@ -53,8 +53,8 @@
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/yourusername/web-spyder.git
-    cd web-spyder
+    git clone https://github.com/KingOfGodless/WebSpyder_Certificate.git
+    cd WebSpyder_Certificate
     ```
 
 2.  **Configure Firebase**
