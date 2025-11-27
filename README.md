@@ -79,7 +79,7 @@
 ├── style.css           # Meka-Cyber CSS Theme
 ├── app.js              # Core Logic (PDF, QR, CSV, UI)
 └── firebase-config.js  # Firebase API Keys (Not verified in git)
-
+```
 
 Here is a professional, high-impact README.md file designed for your GitHub repository. It matches the Meka-Cyber theme of your project and highlights the features we built.
 You can copy and paste the code below directly into a file named README.md.
@@ -166,7 +166,6 @@ Markdown
 ├── style.css           # Meka-Cyber CSS Theme
 ├── app.js              # Core Logic (PDF, QR, CSV, UI)
 └── firebase-config.js  # Firebase API Keys (Not verified in git)
-```
 ⚠️ Important Configuration
 Firestore Rules
 Set your database rules to allow public reading but admin-only writing:
@@ -185,8 +184,8 @@ CORS Issues (Images)
 If certificates generate with blank images, ensure the image hosting provider (e.g., Imgur) allows Cross-Origin requests.
 ✅ Supported: Imgur, GitHub Raw, AWS S3 (configured).
 ❌ Unsupported: Google Drive, Dropbox (preview links).
-📞 Support & Contact
-For support, custom integration, or inquiries, please contact:
-Developer: KSG Karthick
-Email: ksgkarthick@outlook.com
-Phone: +91 76676 51431
+#📞 Support & Contact
+## For support, custom integration, or inquiries, please contact:
+    * Developer: KSG Karthick
+    * Email: ksgkarthick@outlook.com
+    * Phone: +91 76676 51431
