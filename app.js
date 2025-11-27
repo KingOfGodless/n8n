@@ -1,35 +1,23 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+// Import from our separate Config file
+import { auth, db } from "./firebase-config.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+import { collection, addDoc, getDocs, doc, deleteDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
 
-// --- CONFIGURATION ---
-const firebaseConfig = {
-    apiKey: "AIzaSyDjQRvWRNlKUJ_Xq88zZWJf7yJNNigXSPo",
-    authDomain: "tamizhaapp-d6ca6.firebaseapp.com",
-    databaseURL: "https://tamizhaapp-d6ca6-default-rtdb.firebaseio.com",
-    projectId: "tamizhaapp-d6ca6",
-    storageBucket: "tamizhaapp-d6ca6.firebasestorage.app",
-    messagingSenderId: "727816041677",
-    appId: "1:727816041677:web:66c3df6a23beeb0b5a6584",
-    measurementId: "G-9X1E5180VC"
+// --- TABS & UTILS ---
+window.showTab = (tab) => {
+    document.getElementById('tab-single').classList.add('hidden');
+    document.getElementById('tab-bulk').classList.add('hidden');
+    document.getElementById(`tab-${tab}`).classList.remove('hidden');
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// --- ELEMENTS ---
-const loginSection = document.getElementById('loginSection');
-const dashboardSection = document.getElementById('dashboardSection');
-const certTableBody = document.querySelector('#certTable tbody');
+const loader = document.getElementById('genLoader');
 
 // --- AUTHENTICATION ---
 if (document.getElementById('loginBtn')) {
     document.getElementById('loginBtn').addEventListener('click', () => {
         const email = document.getElementById('adminEmail').value;
         const pass = document.getElementById('adminPass').value;
-        signInWithEmailAndPassword(auth, email, pass)
-            .catch(err => alert("Access Denied: " + err.message));
+        signInWithEmailAndPassword(auth, email, pass).catch(e => alert("Login Failed: " + e.message));
     });
 
     document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -38,167 +26,255 @@ if (document.getElementById('loginBtn')) {
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            loginSection.classList.add('hidden');
-            dashboardSection.classList.remove('hidden');
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('dashboardSection').classList.remove('hidden');
             loadCertificates();
         } else {
-            loginSection.classList.remove('hidden');
-            dashboardSection.classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('dashboardSection').classList.add('hidden');
         }
     });
 }
 
-// --- GENERATE CERTIFICATE ---
+// --- SINGLE GENERATE ---
 if (document.getElementById('generateBtn')) {
     document.getElementById('generateBtn').addEventListener('click', async () => {
         const name = document.getElementById('studentName').value;
+        const email = document.getElementById('studentEmail').value;
         const course = document.getElementById('courseName').value;
-        const date = document.getElementById('issueDate').value;
-        const photoInput = document.getElementById('studentPhotoURL').value;
-        const loader = document.getElementById('genLoader');
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        const photo = document.getElementById('studentPhotoURL').value;
 
-        if (!name || !course || !date) { alert("Missing Details"); return; }
+        if (!name || !course || !start) { alert("Fill required fields"); return; }
         loader.style.display = 'block';
 
         try {
-            const uniqueID = 'WS-' + Math.random().toString(36).substr(2, 6).toUpperCase();
-            // Use provided link or default placeholder
-            const photoURL = photoInput.trim() !== "" ? photoInput : "https://via.placeholder.com/150/00f3ff/000000?text=USER";
-
-            // Save to Firestore
-            await addDoc(collection(db, "certificates"), {
-                certID: uniqueID,
-                studentName: name,
-                courseName: course,
-                issueDate: date,
-                photoURL: photoURL,
-                createdAt: new Date()
-            });
-
-            // Create PDF
-            await generatePDF(name, course, date, uniqueID, photoURL);
-            
-            alert(`Certificate ${uniqueID} Created!`);
-            loadCertificates();
-            // Clear Form
+            await createAndMint(name, email, course, start, end, photo, true);
+            // Reset
             document.getElementById('studentName').value = '';
-            document.getElementById('studentPhotoURL').value = '';
-
+            document.getElementById('studentEmail').value = '';
         } catch (e) {
-            console.error(e);
-            alert("Error: " + e.message);
+            console.error(e); alert(e.message);
         } finally {
             loader.style.display = 'none';
         }
     });
 }
 
-// --- PDF GENERATION LOGIC ---
-async function generatePDF(name, course, date, id, photoURL) {
-    const canvasContainer = document.getElementById('cert-canvas-container');
-    const pdfPhoto = document.getElementById('pdfPhoto');
-    const qrContainer = document.getElementById('pdfQR');
+// --- CORE FUNCTION: SAVE & MINT ---
+async function createAndMint(name, email, course, start, end, photo, downloadNow) {
+    const uniqueID = 'WS-' + Math.random().toString(36).substr(2, 6).toUpperCase();
+    const photoURL = photo && photo.trim() !== "" ? photo : "https://via.placeholder.com/150/00f3ff/000000?text=USER";
 
-    // Show template
-    canvasContainer.style.display = 'block';
-    
-    // Fill text
+    // 1. Save to DB
+    await addDoc(collection(db, "certificates"), {
+        certID: uniqueID, studentName: name, studentEmail: email,
+        courseName: course, startDate: start, endDate: end,
+        photoURL: photoURL, createdAt: new Date()
+    });
+
+    // 2. Generate PDF
+    if (downloadNow) {
+        await generatePDF(name, course, start, end, uniqueID, photoURL, true);
+        loadCertificates();
+    }
+}
+
+// --- BULK UPLOAD ---
+if (document.getElementById('bulkBtn')) {
+    document.getElementById('bulkBtn').addEventListener('click', () => {
+        const fileInput = document.getElementById('csvFile');
+        const status = document.getElementById('bulkStatus');
+        
+        if(fileInput.files.length === 0) { alert("Select CSV"); return; }
+        
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const rows = e.target.result.split('\n');
+            status.innerText = `Processing ${rows.length - 1} records...`;
+            
+            let count = 0;
+            for(let i=1; i<rows.length; i++) {
+                const cols = rows[i].split(',');
+                if(cols.length < 5) continue; 
+                // CSV: Name,Email,Course,Start,End,Photo
+                await createAndMint(cols[0].trim(), cols[1].trim(), cols[2].trim(), cols[3].trim(), cols[4].trim(), cols[5]?.trim(), false);
+                count++;
+                status.innerText = `Minted ${count} / ${rows.length - 1}`;
+            }
+            alert("Bulk Process Complete!");
+            loadCertificates();
+        };
+        reader.readAsText(fileInput.files[0]);
+    });
+}
+
+// --- PDF ENGINE ---
+async function generatePDF(name, course, start, end, id, photoURL, isDownload) {
+    // Fill Data
     document.getElementById('pdfName').innerText = name;
     document.getElementById('pdfCourse').innerText = course;
-    document.getElementById('pdfDate').innerText = date;
+    document.getElementById('pdfStart').innerText = start;
+    document.getElementById('pdfEnd').innerText = end;
     document.getElementById('pdfID').innerText = "ID: " + id;
     
-    // Handle Photo (CORS is critical here)
-    pdfPhoto.setAttribute('crossOrigin', 'anonymous');
-    pdfPhoto.src = photoURL;
-
-    // Generate QR
-    qrContainer.innerHTML = "";
-    new QRCode(qrContainer, {
+    // Image Handling
+    const img = document.getElementById('pdfPhoto');
+    img.setAttribute('crossOrigin', 'anonymous');
+    img.src = photoURL;
+    
+    // QR Code
+    document.getElementById('pdfQR').innerHTML = "";
+    new QRCode(document.getElementById('pdfQR'), {
         text: `${window.location.origin}/index.html?id=${id}`,
-        width: 80, height: 80,
-        colorDark : "#00f3ff", colorLight : "#000000",
-        correctLevel : QRCode.CorrectLevel.H
+        width: 80, height: 80, colorDark : "#00f3ff", colorLight : "#000000",
+        correctLevel : QRCode.CorrectLevel.L
     });
 
-    // Wait for image
-    await new Promise((resolve) => {
-        if(pdfPhoto.complete) resolve();
-        else pdfPhoto.onload = resolve;
-        pdfPhoto.onerror = resolve; // Continue even if image breaks
-        setTimeout(resolve, 2000);
+    // Wait for Image
+    await new Promise(r => {
+        if(img.complete) r();
+        else { img.onload = r; img.onerror = r; setTimeout(r, 2000); }
     });
 
-    // Capture & Save
+    // Return if just for View
+    if (!isDownload) return;
+
+    // Capture & Download
     const canvas = await window.html2canvas(document.querySelector("#certDOM"), {
         backgroundColor: "#000000", useCORS: true, scale: 2
     });
-
-    const imgData = canvas.toDataURL('image/png');
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF('l', 'mm', 'a4');
-    pdf.addImage(imgData, 'PNG', 0, 0, pdf.internal.pageSize.getWidth(), pdf.internal.pageSize.getHeight());
-    pdf.save(`WebSpyder_${id}.pdf`);
-
-    canvasContainer.style.display = 'none';
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 297, 210);
+    pdf.save(`${name.replace(/ /g,'_')}_${id}.pdf`);
 }
 
-// --- ADMIN LIST ---
+// --- DASHBOARD DATA & SEARCH ---
 async function loadCertificates() {
-    certTableBody.innerHTML = '';
+    const tableBody = document.getElementById('tableBody');
+    tableBody.innerHTML = '';
+    
+    // Analytics
+    let total = 0, month = 0, courses = new Set();
+    const currMonth = new Date().getMonth();
+
     const q = query(collection(db, "certificates"), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    snapshot.forEach((doc) => {
-        const d = doc.data();
-        certTableBody.innerHTML += `
-            <tr style="border-bottom:1px solid #333;">
-                <td style="color:var(--neon-blue); padding:10px;">${d.certID}</td>
-                <td>${d.studentName}</td>
-                <td style="text-align:right;">
-                    <button class="btn-danger" onclick="deleteCert('${doc.id}')">X</button>
+    const snap = await getDocs(q);
+    
+    snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        total++;
+        if(d.createdAt.toDate().getMonth() === currMonth) month++;
+        courses.add(d.courseName);
+
+        const sName = d.studentName.replace(/'/g, "\\'");
+        const sCourse = d.courseName.replace(/'/g, "\\'");
+        
+        // Mail Link
+        const mailLink = `mailto:${d.studentEmail}?subject=Certificate for ${d.courseName}&body=Hi ${d.studentName}, verify your cert here: ${window.location.origin}/index.html?id=${d.certID}`;
+
+        const row = `
+            <tr style="border-bottom:1px solid #333;" class="data-row">
+                <td style="padding:10px;">
+                    <div style="color:var(--neon-blue); font-weight:bold;">${d.studentName}</div>
+                    <div style="font-size:0.75rem; color:#888;">${d.certID} | ${d.studentEmail || 'No Email'}</div>
+                </td>
+                <td>${d.courseName}</td>
+                <td style="text-align:right; white-space:nowrap;">
+                    <a href="${mailLink}" class="btn-cyber" style="text-decoration:none; padding:4px 8px; font-size:0.7rem; color:#fff; border-color:#fff;">✉</a>
+                    <button class="btn-cyber" style="width:auto; padding:4px 8px; font-size:0.7rem;" 
+                        onclick="triggerView('${d.certID}','${sName}','${sCourse}','${d.startDate}','${d.endDate}','${d.photoURL}')">👁</button>
+                    <button class="btn-cyber" style="width:auto; padding:4px 8px; font-size:0.7rem;" 
+                        onclick="triggerDL('${d.certID}','${sName}','${sCourse}','${d.startDate}','${d.endDate}','${d.photoURL}')">⬇</button>
+                    <button class="btn-danger" style="width:auto; padding:4px 8px; font-size:0.7rem;" 
+                        onclick="deleteCert('${docSnap.id}')">X</button>
                 </td>
             </tr>`;
+        tableBody.innerHTML += row;
+    });
+
+    document.getElementById('statTotal').innerText = total;
+    document.getElementById('statMonth').innerText = month;
+    document.getElementById('statCourses').innerText = courses.size;
+}
+
+// --- SEARCH FILTER ---
+if(document.getElementById('searchInput')) {
+    document.getElementById('searchInput').addEventListener('keyup', function() {
+        const val = this.value.toLowerCase();
+        document.querySelectorAll('.data-row').forEach(row => {
+            row.style.display = row.innerText.toLowerCase().includes(val) ? '' : 'none';
+        });
     });
 }
+
+// --- EXPORT CSV ---
+window.exportToCSV = () => {
+    let csv = "data:text/csv;charset=utf-8,ID,Name,Email,Course\n";
+    document.querySelectorAll('.data-row').forEach(row => {
+        if(row.style.display !== 'none') {
+            // Simplified extraction for demo
+            csv += row.innerText.replace(/\n/g, ",").trim() + "\n";
+        }
+    });
+    const link = document.createElement("a");
+    link.href = encodeURI(csv);
+    link.download = "webspyder_db.csv";
+    link.click();
+};
+
+// --- GLOBAL HELPERS (Accessible from HTML) ---
+window.triggerDL = async (id,n,c,s,e,p) => {
+    if(confirm('Download PDF?')) await generatePDF(n,c,s,e,id,p,true);
+};
+
+window.triggerView = async (id,n,c,s,e,p) => {
+    await generatePDF(n,c,s,e,id,p,false); // Fill template
+    const clone = document.getElementById('certDOM').cloneNode(true);
+    clone.style.width = "800px"; clone.style.height = "600px";
+    document.getElementById('previewContainer').innerHTML = "";
+    document.getElementById('previewContainer').appendChild(clone);
+    document.getElementById('viewModal').classList.remove('hidden');
+};
+
 window.deleteCert = async (id) => {
-    if(confirm("Delete this certificate?")) {
+    if(confirm("Delete Permanently?")) {
         await deleteDoc(doc(db, "certificates", id));
         loadCertificates();
     }
 };
 
-// --- PUBLIC VERIFICATION ---
-window.verifyCertificate = async () => {
-    const inputID = document.getElementById('verifyInput').value.trim();
-    const loader = document.getElementById('verifyLoader');
-    const resultCard = document.getElementById('resultCard');
+// --- PUBLIC VERIFY ---
+if (document.getElementById('verifyBtn')) {
+    document.getElementById('verifyBtn').addEventListener('click', async () => {
+        const id = document.getElementById('verifyInput').value.trim();
+        if(!id) return;
+        
+        document.getElementById('verifyLoader').style.display = 'block';
+        document.getElementById('resultCard').classList.add('hidden');
 
-    if (!inputID) return;
-    loader.style.display = 'block';
-    resultCard.classList.add('hidden');
+        try {
+            const q = query(collection(db, "certificates"), where("certID", "==", id));
+            const snap = await getDocs(q);
+            if(snap.empty) { alert("Invalid Certificate ID"); }
+            else {
+                const d = snap.docs[0].data();
+                document.getElementById('resName').innerText = d.studentName;
+                document.getElementById('resCourse').innerText = d.courseName;
+                document.getElementById('resDate').innerText = `${d.startDate} to ${d.endDate}`;
+                document.getElementById('resID').innerText = d.certID;
+                document.getElementById('resPhoto').src = d.photoURL;
+                document.getElementById('resultCard').classList.remove('hidden');
+            }
+        } catch(e) { console.log(e); } 
+        finally { document.getElementById('verifyLoader').style.display = 'none'; }
+    });
 
-    try {
-        const q = query(collection(db, "certificates"), where("certID", "==", inputID));
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            alert("Certificate Not Found or Invalid ID.");
-        } else {
-            const d = snapshot.docs[0].data();
-            document.getElementById('resName').innerText = d.studentName;
-            document.getElementById('resCourse').innerText = d.courseName;
-            document.getElementById('resDate').innerText = d.issueDate;
-            document.getElementById('resID').innerText = d.certID;
-            document.getElementById('resPhoto').src = d.photoURL;
-            resultCard.classList.remove('hidden');
-        }
-    } catch (e) { alert("Verification Failed"); } 
-    finally { loader.style.display = 'none'; }
-};
-
-// Auto Verify via URL param
-const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.get('id') && document.getElementById('verifyInput')) {
-    document.getElementById('verifyInput').value = urlParams.get('id');
-    window.verifyCertificate();
+    const url = new URLSearchParams(window.location.search);
+    if(url.get('id')) {
+        document.getElementById('verifyInput').value = url.get('id');
+        document.getElementById('verifyBtn').click();
+    }
 }

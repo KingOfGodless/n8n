@@ -5,65 +5,120 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebSpyder | Admin</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Required Libraries -->
+    <!-- PDF Libs -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
 
-    <!-- LOGIN PANEL -->
-    <div id="loginSection" class="cyber-card" style="margin-top: 100px;">
+    <!-- LOGIN -->
+    <div id="loginSection" class="cyber-card" style="margin-top: 100px; max-width: 400px;">
         <h2>System Access</h2>
         <input type="email" id="adminEmail" placeholder="Operator Email">
         <input type="password" id="adminPass" placeholder="Access Key">
-        <button class="btn-cyber" id="loginBtn">Initialize Session</button>
+        <button class="btn-cyber" id="loginBtn">Initialize</button>
     </div>
 
-    <!-- MAIN DASHBOARD -->
+    <!-- DASHBOARD -->
     <div id="dashboardSection" class="hidden" style="width: 100%;">
         <div class="nav-bar">
-            <h2 style="margin:0;">WebSpyder Console</h2>
-            <button class="btn-danger" id="logoutBtn">Terminate</button>
+            <h2 style="margin:0;">WebSpyder Console v3.0</h2>
+            <button class="btn-danger" id="logoutBtn" style="width: auto; padding: 5px 15px;">Terminate</button>
         </div>
 
         <div class="dashboard-container">
-            <!-- GENERATE CARD -->
+            <!-- ANALYTICS -->
+            <div class="stats-row" style="max-width: 900px; width:90%;">
+                <div class="stat-card">
+                    <h4>Total Issued</h4>
+                    <div class="count" id="statTotal">0</div>
+                </div>
+                <div class="stat-card">
+                    <h4>This Month</h4>
+                    <div class="count" id="statMonth">0</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Courses</h4>
+                    <div class="count" id="statCourses">0</div>
+                </div>
+            </div>
+
+            <!-- OPERATIONS CARD -->
             <div class="cyber-card">
-                <h3>Mint Certificate</h3>
-                <input type="text" id="studentName" placeholder="Student Name">
-                <input type="text" id="courseName" placeholder="Course Name">
-                <input type="date" id="issueDate">
-                <label style="color:var(--neon-blue); font-size:0.8rem;">Photo URL (Imgur/GitHub)</label>
-                <input type="text" id="studentPhotoURL" placeholder="https://example.com/photo.jpg">
-                <button class="btn-cyber" id="generateBtn">Create & Download</button>
+                <h3>Operations</h3>
+                <div style="display:flex; gap:10px; margin-bottom:15px;">
+                    <button class="btn-cyber" onclick="showTab('single')">Single Mint</button>
+                    <button class="btn-cyber" onclick="showTab('bulk')">Bulk Upload</button>
+                </div>
+
+                <!-- SINGLE FORM -->
+                <div id="tab-single">
+                    <input type="text" id="studentName" placeholder="Student Name">
+                    <input type="email" id="studentEmail" placeholder="Student Email (Optional)">
+                    <input type="text" id="courseName" placeholder="Course Name">
+                    <div style="display:flex; gap:10px;">
+                        <input type="date" id="startDate">
+                        <input type="date" id="endDate">
+                    </div>
+                    <input type="text" id="studentPhotoURL" placeholder="Photo URL (e.g. Imgur/GitHub)">
+                    <button class="btn-cyber" id="generateBtn">Mint & Download</button>
+                </div>
+
+                <!-- BULK FORM -->
+                <div id="tab-bulk" class="hidden">
+                    <div class="drop-zone" onclick="document.getElementById('csvFile').click()">
+                        <p>Click to Upload CSV</p>
+                        <small>Format: Name,Email,Course,StartDate,EndDate,PhotoURL</small>
+                    </div>
+                    <input type="file" id="csvFile" accept=".csv" style="display:none">
+                    <button class="btn-cyber" id="bulkBtn">Process Batch</button>
+                    <div id="bulkStatus" style="color:var(--neon-blue); text-align:center; margin-top:10px;"></div>
+                </div>
                 <div id="genLoader" class="loader"></div>
             </div>
 
             <!-- DATABASE LIST -->
             <div class="cyber-card">
                 <h3>Database</h3>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search Database..." style="margin:0;">
+                    <button class="btn-cyber" onclick="exportToCSV()" style="width:auto;">Export CSV</button>
+                </div>
                 <div style="max-height: 400px; overflow-y: auto;">
-                    <table id="certTable" style="width:100%; color:#fff; border-collapse: collapse;">
-                        <tbody><!-- Rows inserted by JS --></tbody>
+                    <table id="certTable" style="width:100%; color:#fff; border-collapse: collapse; font-size: 0.9rem;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--neon-blue); color:var(--neon-blue);">
+                                <th style="text-align:left; padding:10px;">Details</th>
+                                <th style="text-align:left;">Course</th>
+                                <th style="text-align:right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody"></tbody>
                     </table>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- HIDDEN CERTIFICATE TEMPLATE -->
+    <!-- VIEW MODAL -->
+    <div id="viewModal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.95); z-index:100; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <button onclick="document.getElementById('viewModal').classList.add('hidden')" class="btn-danger" style="position:absolute; top:20px; right:20px; width:auto;">CLOSE</button>
+        <div id="previewContainer" style="transform: scale(0.8);"></div>
+    </div>
+
+    <!-- PDF TEMPLATE (Hidden) -->
     <div id="cert-canvas-container">
         <div class="cert-border" id="certDOM">
             <h1 style="font-size:3rem; margin-top:20px;">CERTIFICATE</h1>
             <p style="letter-spacing: 5px; text-transform:uppercase;">Of Completion</p>
             <div style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
                 <img id="pdfPhoto" class="cert-photo" src="">
-                <p>This certifies that</p>
-                <h2 id="pdfName" class="cert-name">NAME</h2>
-                <p>Has completed the course</p>
-                <h3 id="pdfCourse" style="color:white; margin:10px 0;">COURSE</h3>
-                <p>Date: <span id="pdfDate"></span></p>
+                <p>Awarded to</p>
+                <h2 id="pdfName" class="cert-name">STUDENT NAME</h2>
+                <p>For completing</p>
+                <h3 id="pdfCourse" style="color:white; margin:10px 0;">COURSE NAME</h3>
+                <p>Duration: <span id="pdfStart" style="color:var(--neon-blue)"></span> to <span id="pdfEnd" style="color:var(--neon-blue)"></span></p>
             </div>
             <div id="pdfQR" style="position: absolute; bottom: 20px; right: 20px;"></div>
             <div id="pdfID" style="position: absolute; bottom: 20px; left: 20px; color: #555;"></div>
